@@ -24,6 +24,8 @@ import tempfile
 import six
 from six.moves.urllib.parse import quote
 
+import kubernetes.client
+
 from kubeflow.katib.configuration import Configuration
 import kubeflow.katib.models
 from kubeflow.katib import rest
@@ -305,7 +307,15 @@ class ApiClient(object):
             if klass in self.NATIVE_TYPES_MAPPING:
                 klass = self.NATIVE_TYPES_MAPPING[klass]
             else:
-                klass = getattr(kubeflow.katib.models, klass)
+                if hasattr(kubeflow.katib.models, klass):
+                    klass = getattr(kubeflow.katib.models, klass)
+                elif hasattr(kubernetes.client, klass):
+                    klass = getattr(kubernetes.client, klass)
+                else:
+                    raise RuntimeError(f"""
+                    Neither 'kubeflow.katib.models' nor 'kubernetes.client'
+                    has class '{klass}'
+                    """)
 
         if klass in self.PRIMITIVE_TYPES:
             return self.__deserialize_primitive(data, klass)
